@@ -1,0 +1,35 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Symbol {
+  id BigInt @id @default(autoincrement())
+  symbolId String @unique @db.VarChar(20) @map("symbol_id")
+  display_symbol String @db.VarChar(40)
+  description String? @db.VarChar(120)
+  type String @db.VarChar(40)
+
+  quotes Quote[]
+}
+
+model Quote {
+  id BigInt @id @default(autoincrement())
+  symbol Symbol @relation(fields: [symbolId], references: [symbolId])
+  symbolId String @db.VarChar(20) @map("symbol_id")
+  currentPrice Float @map("current_price")
+  created DateTime @default(now()) @map("created_at")
+  updated DateTime @updatedAt() @map("updated_at")
+
+  @@index([symbolId, created(sort: Desc)])
+}
