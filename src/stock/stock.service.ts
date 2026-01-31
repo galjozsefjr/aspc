@@ -6,11 +6,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
-import { StockSymbolImpl } from './stock.types';
+import { QuoteImpl, StockSymbolImpl } from './stock.types';
 import { FinnhubService } from 'src/finnhub/finnhub.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { StockSymbol } from 'src/generated/prisma/client';
 
 @Injectable()
 export class StockService {
+  static REFRESH_DELAY = 50;
+
   private log = new Logger(StockService.name);
 
   constructor(
@@ -54,6 +58,52 @@ export class StockService {
       this.log.error(err);
       throw new InternalServerErrorException(
         `Failed to add symbol "${symbolId}"`,
+      );
+    }
+  }
+
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async updateQuoteList() {
+    try {
+      const symbols = await this.db.stockSymbol.findMany();
+      this.log.log(`Start periodic refresh of ${symbols.length} symbols`);
+      for (const symbol of symbols) {
+        /*
+         * The delay is added to avoid bombing the third party service
+         * This can only work for a couple of symbols - better solution could be to be grouped by e.g. 10 elements at one time
+         * The best way would be to subscribe to WebSocket and request only when trade happened instead of polling
+         */
+        await this.refreshQuote(symbol);
+        await new Promise((resolve) =>
+          setTimeout(resolve, StockService.REFRESH_DELAY),
+        );
+      }
+      this.log.log(`Refreshed ${symbols.length} symbols`);
+    } catch (err) {
+      this.log.error(err);
+    }
+  }
+
+  async refreshQuote(symbol: StockSymbol): Promise<QuoteImpl | null> {
+    try {
+      const quote = await this.finnhub.getQuote(symbol.symbolId);
+      if (!quote) {
+        this.log.error(`Cannot retrieve quote for symbol "${symbol.symbolId}"`);
+        return null;
+      }
+      const [refreshedQuote] = await this.db.$transaction([
+        this.db.quote.create({
+          data: {
+            symbolId: symbol.symbolId,
+            currentPrice: quote.currentPrice,
+          },
+        }),
+      ]);
+      return new QuoteImpl(refreshedQuote);
+    } catch (err) {
+      this.log.error(err);
+      throw new InternalServerErrorException(
+        `Failed to refresh quote for symbol ${symbol.symbolId}`,
       );
     }
   }

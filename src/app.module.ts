@@ -7,6 +7,7 @@ import config from './app.configuration';
 import { StockModule } from './stock/stock.module';
 import { FinnhubModule } from './finnhub/finnhub.module';
 import { PrismaModule } from './database/prisma.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -38,6 +39,7 @@ const isProd = process.env.NODE_ENV === 'production';
         },
       },
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     FinnhubModule,
     StockModule,

@@ -12,7 +12,8 @@ declare global {
   }
 }
 
-BigInt.toJSON = function () {
+// @ts-expect-error any
+BigInt.prototype.toJSON = function () {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return this.toString();
 };

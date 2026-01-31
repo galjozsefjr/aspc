@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsString, MaxLength } from 'class-validator';
-import { StockSymbol } from 'src/generated/prisma/browser';
+import type { StockSymbol, Quote } from 'src/generated/prisma/client';
 
 export class StockSymbolRequest {
   @ApiProperty({ type: String, description: 'Symbol', example: 'AAPL' })
@@ -83,5 +83,49 @@ export class StockSymbolImpl implements StockSymbol {
     this.displaySymbol = displaySymbol;
     this.description = description;
     this.type = type;
+  }
+}
+
+export class QuoteImpl implements Quote {
+  @ApiProperty({
+    type: String,
+    example: '156',
+  })
+  id: bigint;
+
+  @ApiProperty({
+    type: String,
+    example: 'AAPL',
+  })
+  symbolId: string;
+
+  @ApiProperty({
+    type: Number,
+    example: '259.48',
+  })
+  currentPrice: number;
+
+  @ApiProperty({
+    type: Number,
+    description: 'Date of creation',
+    format: 'timestamp',
+    example: '1769806800',
+  })
+  created: Date;
+
+  @ApiProperty({
+    type: Number,
+    description: 'Last updated',
+    format: 'timestamp',
+    example: '1769806800',
+  })
+  updated: Date;
+
+  constructor(quote: Quote) {
+    this.id = quote.id;
+    this.symbolId = quote.symbolId;
+    this.currentPrice = quote.currentPrice;
+    this.created = quote.created;
+    this.updated = quote.updated;
   }
 }
