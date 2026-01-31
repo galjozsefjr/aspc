@@ -6,6 +6,17 @@ import { setupSwagger } from './swagger/setup-swagger';
 import { ConfigService } from '@nestjs/config';
 import { Configuration } from './app.configuration';
 
+declare global {
+  interface BigIntConstructor {
+    toJSON: () => bigint;
+  }
+}
+
+BigInt.toJSON = function () {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return this.toString();
+};
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config: ConfigService<Configuration> = app.get(ConfigService);
@@ -40,7 +51,7 @@ async function bootstrap() {
       logger.debug(
         `Application started in ${process.env.NODE_ENV} environment`,
       );
-      logger.debug(`Service layer is listening on`);
+      logger.debug(`Service layer is listening on ${apiHost}`);
     });
   } catch (err) {
     logger.error(err);

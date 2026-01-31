@@ -17,6 +17,9 @@ export class Configuration {
   @IsString()
   @MinLength(30)
   FINNHUB_API_KEY = '';
+
+  @IsString()
+  DATABASE_URL: string;
 }
 
 const config = Object.keys(process.env).reduce(

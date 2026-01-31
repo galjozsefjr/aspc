@@ -7,25 +7,27 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model Symbol {
+model StockSymbol {
   id BigInt @id @default(autoincrement())
   symbolId String @unique @db.VarChar(20) @map("symbol_id")
-  display_symbol String @db.VarChar(40)
+  displaySymbol String @db.VarChar(40) @map("display_symbol")
   description String? @db.VarChar(120)
   type String @db.VarChar(40)
 
   quotes Quote[]
+  @@map("Symbol")
 }
 
 model Quote {
   id BigInt @id @default(autoincrement())
-  symbol Symbol @relation(fields: [symbolId], references: [symbolId])
+  symbol StockSymbol @relation(fields: [symbolId], references: [symbolId])
   symbolId String @db.VarChar(20) @map("symbol_id")
   currentPrice Float @map("current_price")
   created DateTime @default(now()) @map("created_at")
