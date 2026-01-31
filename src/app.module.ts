@@ -4,6 +4,9 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import config from './app.configuration';
+import { StockModule } from './stock/stock.module';
+import { FinnhubModule } from './finnhub/finnhub.module';
+import { PrismaModule } from './database/prisma.module';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -35,6 +38,9 @@ const isProd = process.env.NODE_ENV === 'production';
         },
       },
     }),
+    PrismaModule,
+    FinnhubModule,
+    StockModule,
   ],
   controllers: [],
   providers: [
