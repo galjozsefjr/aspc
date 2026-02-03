@@ -6,7 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
-import { QuoteImpl, StockSymbolImpl } from './stock.types';
+import {
+  RawMovingAverageRow,
+  QuoteImpl,
+  StockSymbolImpl,
+  SymbolWithMovingAverage,
+} from './stock.types';
 import { FinnhubService } from 'src/finnhub/finnhub.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { StockSymbol } from 'src/generated/prisma/client';
@@ -62,6 +67,34 @@ export class StockService {
     }
   }
 
+  async getMovingAverage(
+    symbol: StockSymbol,
+    topValues = 10,
+  ): Promise<SymbolWithMovingAverage | null> {
+    const resultSet = await this.db.$queryRawUnsafe<RawMovingAverageRow[]>(
+      `
+        SELECT
+          symbol_id,
+          MAX(created_at) as created_at,
+          AVG(current_price) as moving_average
+        FROM (
+          SELECT symbol_id, created_at, current_price
+          FROM "Quote"
+          WHERE symbol_id = $1
+          ORDER BY created_at DESC
+          LIMIT $2
+        )
+        GROUP BY symbol_id
+      `,
+      symbol.symbolId as string,
+      topValues,
+    );
+    if (!resultSet?.length) {
+      return null;
+    }
+    return new SymbolWithMovingAverage(symbol, resultSet[0]);
+  }
+
   @Cron(CronExpression.EVERY_5_MINUTES)
   async updateQuoteList() {
     try {
@@ -86,7 +119,7 @@ export class StockService {
 
   async refreshQuote(symbol: StockSymbol): Promise<QuoteImpl | null> {
     try {
-      const quote = await this.finnhub.getQuote(symbol.symbolId);
+      const quote = await this.finnhub.getQuote(symbol.symbolId as string);
       if (!quote) {
         this.log.error(`Cannot retrieve quote for symbol "${symbol.symbolId}"`);
         return null;
