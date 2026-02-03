@@ -1,4 +1,4 @@
-import { Controller, Param, Put } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Put } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -7,7 +7,11 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { StockSymbolImpl, StockSymbolRequest } from './stock.types';
+import {
+  StockSymbolImpl,
+  StockSymbolRequest,
+  SymbolWithMovingAverage,
+} from './stock.types';
 import { StockService } from './stock.service';
 
 @ApiTags('Stock')
@@ -15,18 +19,31 @@ import { StockService } from './stock.service';
 export class StockController {
   constructor(private stockService: StockService) {}
 
-  /*@ApiOperation({
+  @ApiOperation({
     operationId: 'getSymbol',
     summary: 'Symbol data',
     description:
       'Returns the stock price, last updated time and moving average for a given symbol',
   })
+  @ApiOkResponse({ type: SymbolWithMovingAverage })
   @ApiBadRequestResponse({ description: 'Invalid symbol' })
   @ApiNotFoundResponse({
     description: 'The selected symbol does not exists',
   })
   @Get('/:symbol')
-  getSymbol(@Param() { symbol }: StockSymbolRequest) {}*/
+  async getSymbol(@Param() { symbol: symbolId }: StockSymbolRequest) {
+    const symbol = await this.stockService.getSymbol(symbolId);
+    if (!symbol) {
+      throw new NotFoundException(`Cannot find symbol: "${symbolId}"`);
+    }
+    const movingAverage = await this.stockService.getMovingAverage(symbol);
+    if (!movingAverage) {
+      throw new NotFoundException(
+        `The selected symbol does not have any stored value`,
+      );
+    }
+    return movingAverage;
+  }
 
   /**
    * @todo: Authorization is highly recommended for this endpoint

@@ -129,3 +129,36 @@ export class QuoteImpl implements Quote {
     this.updated = quote.updated;
   }
 }
+
+export type RawMovingAverageRow = {
+  symbol_id: string;
+  created_at: string;
+  moving_average: number;
+};
+
+export class SymbolWithMovingAverage {
+  @ApiProperty({
+    type: StockSymbolDto,
+    description: 'Request Symbol details',
+  })
+  symbol: StockSymbol;
+
+  @ApiProperty({
+    type: Number,
+    description: 'Average value of the top 10 stored prices',
+  })
+  movingAverage: number;
+
+  @ApiProperty({
+    type: String,
+    format: 'DateTime',
+    description: 'Last stored date of the requested quote',
+  })
+  lastUpdated: string;
+
+  constructor(symbol: StockSymbol, movingAverage: RawMovingAverageRow) {
+    this.symbol = symbol;
+    this.movingAverage = movingAverage.moving_average;
+    this.lastUpdated = movingAverage.created_at;
+  }
+}
