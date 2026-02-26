@@ -100,18 +100,24 @@ export class StockService {
    * Using the @Cron solution is only suggested to apply in non-production environment
    * Running the service in multiple nodes (e.g. using a load balancer) ends in requesting and saving possibly the same data
    * Suggested solution: call a dedicated endpoint periodically e.g. from a lambda function
-   * 
+   *
    * The requests run in chunks, after each chunk finished the service waits a few millisiconds to avoid bombing the third party service.
-   * This works only for around 1000 stock symbols, further steps may cause data collision
+   * This works only for around 200 stock symbols, further steps may cause data collision
    */
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_MINUTE)
   async updateQuoteList() {
     try {
       const symbols = await this.db.stockSymbol.findMany();
       this.log.log(`Start periodic refresh of ${symbols.length} symbols`);
       const requestChunks: Array<StockSymbol[]> = [];
-      for (let i = 0; i < symbols.length; i += StockService.REFRESH_CHUNK_SIZE) {
-        requestChunks.push(symbols.slice(i, i + StockService.REFRESH_CHUNK_SIZE));
+      for (
+        let i = 0;
+        i < symbols.length;
+        i += StockService.REFRESH_CHUNK_SIZE
+      ) {
+        requestChunks.push(
+          symbols.slice(i, i + StockService.REFRESH_CHUNK_SIZE),
+        );
       }
       for (const symbolGroup of requestChunks) {
         await Promise.allSettled(
