@@ -19,6 +19,7 @@ import { StockSymbol } from 'src/generated/prisma/client';
 @Injectable()
 export class StockService {
   static REFRESH_DELAY = 50;
+  protected static REFRESH_CHUNK_SIZE = 10;
 
   private log = new Logger(StockService.name);
 
@@ -86,7 +87,7 @@ export class StockService {
         )
         GROUP BY symbol_id
       `,
-      symbol.symbolId as string,
+      symbol.symbolId,
       topValues,
     );
     if (!resultSet?.length) {
@@ -95,18 +96,27 @@ export class StockService {
     return new SymbolWithMovingAverage(symbol, resultSet[0]);
   }
 
+  /**
+   * Using the @Cron solution is only suggested to apply in non-production environment
+   * Running the service in multiple nodes (e.g. using a load balancer) ends in requesting and saving possibly the same data
+   * Suggested solution: call a dedicated endpoint periodically e.g. from a lambda function
+   * 
+   * The requests run in chunks, after each chunk finished the service waits a few millisiconds to avoid bombing the third party service.
+   * This works only for around 1000 stock symbols, further steps may cause data collision
+   */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async updateQuoteList() {
     try {
       const symbols = await this.db.stockSymbol.findMany();
       this.log.log(`Start periodic refresh of ${symbols.length} symbols`);
-      for (const symbol of symbols) {
-        /*
-         * The delay is added to avoid bombing the third party service
-         * This can only work for a couple of symbols - better solution could be to be grouped by e.g. 10 elements at one time
-         * The best way would be to subscribe to WebSocket and request only when trade happened instead of polling
-         */
-        await this.refreshQuote(symbol);
+      const requestChunks: Array<StockSymbol[]> = [];
+      for (let i = 0; i < symbols.length; i += StockService.REFRESH_CHUNK_SIZE) {
+        requestChunks.push(symbols.slice(i, i + StockService.REFRESH_CHUNK_SIZE));
+      }
+      for (const symbolGroup of requestChunks) {
+        await Promise.allSettled(
+          symbolGroup.map((symbol) => this.refreshQuote(symbol)),
+        );
         await new Promise((resolve) =>
           setTimeout(resolve, StockService.REFRESH_DELAY),
         );
@@ -119,7 +129,7 @@ export class StockService {
 
   async refreshQuote(symbol: StockSymbol): Promise<QuoteImpl | null> {
     try {
-      const quote = await this.finnhub.getQuote(symbol.symbolId as string);
+      const quote = await this.finnhub.getQuote(symbol.symbolId);
       if (!quote) {
         this.log.error(`Cannot retrieve quote for symbol "${symbol.symbolId}"`);
         return null;
