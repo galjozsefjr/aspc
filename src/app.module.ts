@@ -18,7 +18,7 @@ const isProd = process.env.NODE_ENV === 'production';
     }),
     LoggerModule.forRoot({
       pinoHttp: {
-        name: 'APCS',
+        name: 'ASPC',
         level: isProd ? 'info' : 'debug',
         serializers: {
           req: ({ method, url, params }) => ({ method, url, params }),

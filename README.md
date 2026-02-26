@@ -1,24 +1,36 @@
-# Advanced Stock Price Checked
+# Advanced Stock Price Checker
 
 ## Prerequisites
 - Node.JS 24+
 - Docker
 - Yarn v1.22+
 
-## Installation steps
+## Docker configuration steps
+Create .env file based on .env.example. Replace the `FINNHUB_API_KEY` with your own.
+
+Run docker:
+```sh
+docker compose up --build
+```
+
+This will setup the necessary database and start the application on port 3000.<br>
+*Note*: it's expected to have an error on the first run as the database is not yet setup.
+
+Run the database setup:
+```sh
+docker exec -it aspc npx prisma migrate deploy
+```
+
+This will run the necessary modifications and the application is ready to go.
+
+Open http://localhost:3000/api-doc in your browser to access the OAS
+
+## Installation steps for Development
 To install dependencies run the following command:
 ```sh
 yarn install
 ```
 Create .env file based on .env.example. Replace the `FINNHUB_API_KEY` with your own
-
-Run docker:
-```sh
-docker compose up
-```
-
-This will setup the necessary database
-*Note:* as an alternative you can define the necessary environment variables as 
 
 To initialize database structure run these commands:
 ```sh
@@ -31,7 +43,7 @@ yarn run prisma generate
 yarn start
 ```
 
-Open http://localhost:3000/api-doc in your browser to access the Swagger
+Open http://localhost:3000/api-doc in your browser to access the OAS
 
 ## Usage
 ### Adding a new symbol to check-out
